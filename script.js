@@ -1,6 +1,7 @@
 const COINS_LIMIT = 200;
-const API_URL = "https://api.binance.com/api/v3/ticker/24hr"; // API da Binance
-
+const API_URL = "https://api.binance.com/api/v3/ticker/price";
+const MARKET_API = "https://api.binance.com/api/v3/exchangeInfo";
+const KLINES_API = "https://api.binance.com/api/v3/klines";
 const mainCoin = "BTCUSDT"; // Bitcoin como referência
 
 // Lista de stablecoins para ignorar
@@ -26,10 +27,10 @@ function calculateRSI(closingPrices) {
 // Buscar lista das top 200 moedas, removendo stablecoins e garantindo que sejam USDT pairs
 async function getTopCoins() {
     try {
-        const response = await fetch(API_URL);
+        const response = await fetch(MARKET_API);
         const data = await response.json();
 
-        return data
+        return data.symbols
             .map(coin => coin.symbol)
             .filter(symbol => symbol.endsWith("USDT"))  // Apenas pares USDT
             .filter(symbol => !STABLECOINS.some(stable => symbol.includes(stable))) // Remove stablecoins
@@ -44,10 +45,12 @@ async function getTopCoins() {
 // Buscar RSI para diferentes tempos gráficos
 async function fetchRSI(coinId, interval) {
     try {
-        const url = `https://api.binance.com/api/v3/klines?symbol=${coinId}&interval=${interval}&limit=15`;
+        const url = `${KLINES_API}?symbol=${coinId}&interval=${interval}&limit=15`;
         const response = await fetch(url);
         const data = await response.json();
         
+        if (!data || data.length === 0) return null;
+
         const closingPrices = data.map(candle => parseFloat(candle[4])); // Preço de fechamento
         return calculateRSI(closingPrices);
     } catch (error) {
@@ -68,6 +71,8 @@ async function fetchAndDisplayRSI(coinId, heatmapContainer) {
 
         // Verificar se os RSIs estão alinhados (diferença máxima de 7 pontos)
         const rsiValues = [rsi5m, rsi10m, rsi1h, rsi4h].filter(rsi => rsi !== null);
+        if (rsiValues.length < 4) return; // Se algum RSI não estiver disponível, pula essa moeda
+
         const maxRSI = Math.max(...rsiValues);
         const minRSI = Math.min(...rsiValues);
         const aligned = (maxRSI - minRSI) <= 7;
@@ -103,6 +108,6 @@ async function updateHeatmap() {
     }
 }
 
-// Inicializa o heatmap e atualiza a cada 5 minutos
+// Inicializa o heatmap e atualiza a cada 30 segundos
 updateHeatmap();
-setInterval(updateHeatmap, 5 * 60 * 1000);
+setInterval(updateHeatmap, 30000);  // Atualiza a cada 30 segundos
