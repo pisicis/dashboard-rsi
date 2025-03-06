@@ -1,5 +1,5 @@
 const COINS_LIMIT = 200;
-const API_URL = "https://api.binance.com/api/v3/ticker/24hr";  // Melhor API para múltiplos pares
+const API_URL = "https://api.binance.com/api/v3/ticker/24hr"; // API da Binance
 
 const mainCoin = "BTCUSDT"; // Bitcoin como referência
 
@@ -23,15 +23,16 @@ function calculateRSI(closingPrices) {
     return 100 - (100 / (1 + rs));
 }
 
-// Buscar lista das top 200 moedas, removendo stablecoins
+// Buscar lista das top 200 moedas, removendo stablecoins e garantindo que sejam USDT pairs
 async function getTopCoins() {
     try {
         const response = await fetch(API_URL);
         const data = await response.json();
-        
+
         return data
             .map(coin => coin.symbol)
-            .filter(symbol => !STABLECOINS.some(stable => symbol.includes(stable)))  // Remove stablecoins
+            .filter(symbol => symbol.endsWith("USDT"))  // Apenas pares USDT
+            .filter(symbol => !STABLECOINS.some(stable => symbol.includes(stable))) // Remove stablecoins
             .slice(0, COINS_LIMIT);  // Pega apenas as 200 primeiras moedas
 
     } catch (error) {
