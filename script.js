@@ -1,10 +1,12 @@
 const COINS_LIMIT = 200;
-const API_URL = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=" + COINS_LIMIT + "&page=1&sparkline=false";
-const MARKET_CHART_URL = "https://api.coingecko.com/api/v3/coins/";
+const API_URL = "https://api.binance.com/api/v3/ticker/24hr";  // Melhor API para múltiplos pares
 
-const mainCoin = "bitcoin"; // BTC em destaque
+const mainCoin = "BTCUSDT"; // Bitcoin como referência
 
-// Função para calcular RSI baseado em preços de fechamento
+// Lista de stablecoins para ignorar
+const STABLECOINS = ["USDT", "BUSD", "USDC", "DAI", "TUSD", "FDUSD"];
+
+// Função para calcular RSI
 function calculateRSI(closingPrices) {
     const n = closingPrices.length;
     if (n < 2) return 0;
@@ -21,48 +23,78 @@ function calculateRSI(closingPrices) {
     return 100 - (100 / (1 + rs));
 }
 
-// Buscar lista das top 200 moedas pelo Market Cap
+// Buscar lista das top 200 moedas, removendo stablecoins
 async function getTopCoins() {
     try {
         const response = await fetch(API_URL);
         const data = await response.json();
-        return data.map(coin => coin.id);
+        
+        return data
+            .map(coin => coin.symbol)
+            .filter(symbol => !STABLECOINS.some(stable => symbol.includes(stable)))  // Remove stablecoins
+            .slice(0, COINS_LIMIT);  // Pega apenas as 200 primeiras moedas
+
     } catch (error) {
-        console.error("Erro ao buscar top moedas:", error);
+        console.error("Erro ao buscar moedas:", error);
         return [];
     }
 }
 
-// Buscar RSI e preencher heatmap
-async function fetchAndDisplayRSI(coinId, heatmapContainer) {
+// Buscar RSI para diferentes tempos gráficos
+async function fetchRSI(coinId, interval) {
     try {
-        const url = `${MARKET_CHART_URL}${coinId}/market_chart?vs_currency=usd&days=15&interval=daily`;
+        const url = `https://api.binance.com/api/v3/klines?symbol=${coinId}&interval=${interval}&limit=15`;
         const response = await fetch(url);
         const data = await response.json();
-        const prices = data.prices.map(p => p[1]);
-        const rsi = calculateRSI(prices);
-
-        // Definir cor do heatmap baseado no RSI
-        let colorClass = "neutral";
-        if (rsi >= 70) colorClass = "overbought";
-        else if (rsi >= 60) colorClass = "strong";
-        else if (rsi <= 30) colorClass = "oversold";
-        else if (rsi <= 40) colorClass = "weak";
-
-        // Criar elemento para o heatmap
-        const coinDiv = document.createElement("div");
-        coinDiv.className = `heatmap-box ${colorClass}`;
-        coinDiv.innerHTML = `<b>${coinId.toUpperCase()}</b><br>RSI: ${rsi.toFixed(2)}`;
-        heatmapContainer.appendChild(coinDiv);
+        
+        const closingPrices = data.map(candle => parseFloat(candle[4])); // Preço de fechamento
+        return calculateRSI(closingPrices);
     } catch (error) {
-        console.error(`Erro ao buscar dados de ${coinId}:`, error);
+        console.error(`Erro ao buscar RSI de ${coinId} (${interval}):`, error);
+        return null;
     }
 }
 
-// Atualizar todas as moedas no heatmap
+// Buscar RSI em múltiplos tempos gráficos e definir cor
+async function fetchAndDisplayRSI(coinId, heatmapContainer) {
+    try {
+        const [rsi5m, rsi10m, rsi1h, rsi4h] = await Promise.all([
+            fetchRSI(coinId, "5m"),
+            fetchRSI(coinId, "10m"),
+            fetchRSI(coinId, "1h"),
+            fetchRSI(coinId, "4h")
+        ]);
+
+        // Verificar se os RSIs estão alinhados (diferença máxima de 7 pontos)
+        const rsiValues = [rsi5m, rsi10m, rsi1h, rsi4h].filter(rsi => rsi !== null);
+        const maxRSI = Math.max(...rsiValues);
+        const minRSI = Math.min(...rsiValues);
+        const aligned = (maxRSI - minRSI) <= 7;
+
+        let colorClass = "neutral";  // Padrão: cinza
+
+        if (aligned) {
+            if (rsiValues.every(rsi => rsi >= 70)) {
+                colorClass = "overbought";  // Vermelho → sobrecomprado
+            } else if (rsiValues.every(rsi => rsi <= 30)) {
+                colorClass = "oversold";  // Verde → sobrevenda
+            }
+        }
+
+        // Criar elemento no heatmap
+        const coinDiv = document.createElement("div");
+        coinDiv.className = `heatmap-box ${colorClass}`;
+        coinDiv.innerHTML = `<b>${coinId.replace("USDT", "")}</b>`;
+        heatmapContainer.appendChild(coinDiv);
+    } catch (error) {
+        console.error(`Erro ao processar ${coinId}:`, error);
+    }
+}
+
+// Atualizar heatmap com todas as moedas
 async function updateHeatmap() {
     const heatmapContainer = document.getElementById("heatmap");
-    heatmapContainer.innerHTML = ""; // Limpa o heatmap antes de atualizar
+    heatmapContainer.innerHTML = ""; // Limpa antes de atualizar
 
     const topCoins = await getTopCoins();
     for (const coin of topCoins) {
