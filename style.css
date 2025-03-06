@@ -24,6 +24,8 @@ ul#crypto-list li {
     margin: 4px 0;
     border-bottom: 1px solid #ddd;
 }
-.overbought { color: red; }
-.oversold { color: green; }
+.overbought { color: red; font-weight: bold; }
+.oversold { color: green; font-weight: bold; }
 .neutral { color: gray; }
+.up-trend { color: blue; font-weight: bold; }
+.down-trend { color: orange; font-weight: bold; }
