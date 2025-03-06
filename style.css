@@ -1,31 +1,42 @@
 body {
     font-family: Arial, sans-serif;
-    margin: 20px;
+    text-align: center;
     background: #f9f9f9;
-    color: #333;
 }
-h1, h2 {
-    text-align: center;
+
+h1 {
+    margin-bottom: 20px;
 }
-#btc-rsi {
-    font-size: 1.2em;
-    font-weight: bold;
-    margin-bottom: 15px;
-    text-align: center;
-}
-ul#crypto-list {
-    list-style: none;
-    padding: 0;
-    max-width: 600px;
+
+.heatmap-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 8px;
+    max-width: 90%;
     margin: 0 auto;
 }
-ul#crypto-list li {
-    padding: 8px 5px;
-    margin: 4px 0;
-    border-bottom: 1px solid #ddd;
+
+.heatmap-box {
+    padding: 10px;
+    border-radius: 5px;
+    text-align: center;
+    font-weight: bold;
+    color: #fff;
 }
-.overbought { color: red; font-weight: bold; }
-.oversold { color: green; font-weight: bold; }
-.neutral { color: gray; }
-.up-trend { color: blue; font-weight: bold; }
-.down-trend { color: orange; font-weight: bold; }
+
+/* Definição das cores do heatmap */
+.oversold {
+    background-color: #1a936f; /* Verde escuro */
+}
+.weak {
+    background-color: #88d498; /* Verde claro */
+}
+.neutral {
+    background-color: #aaa; /* Cinza */
+}
+.strong {
+    background-color: #e68a00; /* Laranja */
+}
+.overbought {
+    background-color: #d9534f; /* Vermelho */
+}
