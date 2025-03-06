@@ -5,7 +5,7 @@ const KLINES_API = "https://api.binance.com/api/v3/klines";
 const mainCoin = "BTCUSDT"; // Bitcoin como referência
 
 // Lista de stablecoins para ignorar
-const STABLECOINS = ["USDT", "BUSD", "USDC", "DAI", "TUSD", "FDUSD"];
+const STABLECOINS = ["BUSD", "USDC", "DAI", "TUSD", "FDUSD"];
 
 // Função para calcular RSI
 function calculateRSI(closingPrices) {
@@ -24,7 +24,7 @@ function calculateRSI(closingPrices) {
     return 100 - (100 / (1 + rs));
 }
 
-// Buscar lista das top 200 moedas, removendo stablecoins e garantindo que sejam USDT pairs
+// Buscar lista das top 200 moedas (apenas pares USDT)
 async function getTopCoins() {
     try {
         const response = await fetch(MARKET_API);
@@ -48,7 +48,7 @@ async function fetchRSI(coinId, interval) {
         const url = `${KLINES_API}?symbol=${coinId}&interval=${interval}&limit=15`;
         const response = await fetch(url);
         const data = await response.json();
-        
+
         if (!data || data.length === 0) return null;
 
         const closingPrices = data.map(candle => parseFloat(candle[4])); // Preço de fechamento
@@ -69,7 +69,6 @@ async function fetchAndDisplayRSI(coinId, heatmapContainer) {
             fetchRSI(coinId, "4h")
         ]);
 
-        // Verificar se os RSIs estão alinhados (diferença máxima de 7 pontos)
         const rsiValues = [rsi5m, rsi10m, rsi1h, rsi4h].filter(rsi => rsi !== null);
         if (rsiValues.length < 4) return; // Se algum RSI não estiver disponível, pula essa moeda
 
@@ -108,6 +107,20 @@ async function updateHeatmap() {
     }
 }
 
-// Inicializa o heatmap e atualiza a cada 30 segundos
+// Função para mostrar botão de atualização a cada 1 minuto
+function showUpdateButton() {
+    const button = document.getElementById("updateButton");
+    button.style.display = "block"; // Exibe o botão
+}
+
+// Função para atualizar ao clicar no botão
+function manualUpdate() {
+    updateHeatmap();
+    const button = document.getElementById("updateButton");
+    button.style.display = "none"; // Esconde o botão após clicar
+}
+
+// Inicializa o heatmap e atualiza automaticamente
 updateHeatmap();
 setInterval(updateHeatmap, 30000);  // Atualiza a cada 30 segundos
+setInterval(showUpdateButton, 60000);  // Mostra o botão a cada 1 minuto
