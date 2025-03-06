@@ -17,26 +17,14 @@ h1 {
 }
 
 .heatmap-box {
-    padding: 10px;
+    padding: 15px;
     border-radius: 5px;
     text-align: center;
     font-weight: bold;
     color: #fff;
 }
 
-/* Definição das cores do heatmap */
-.oversold {
-    background-color: #1a936f; /* Verde escuro */
-}
-.weak {
-    background-color: #88d498; /* Verde claro */
-}
-.neutral {
-    background-color: #aaa; /* Cinza */
-}
-.strong {
-    background-color: #e68a00; /* Laranja */
-}
-.overbought {
-    background-color: #d9534f; /* Vermelho */
-}
+/* Cores do heatmap */
+.oversold { background-color: #1a936f; } /* Verde escuro */
+.neutral { background-color: #aaa; } /* Cinza */
+.overbought { background-color: #d9534f; } /* Vermelho */
