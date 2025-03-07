@@ -66,4 +66,62 @@ async function fetchAndDisplayRSI(coinSymbol, heatmapContainer) {
         const [rsi5m, rsi10m, rsi1h, rsi4h] = await Promise.all([
             fetchRSI(coinSymbol, "5m"),
             fetchRSI(coinSymbol, "10m"),
-            fetchRSI
+            fetchRSI(coinSymbol, "1h"),
+            fetchRSI(coinSymbol, "4h")
+        ]);
+
+        const rsiValues = [rsi5m, rsi10m, rsi1h, rsi4h].filter(rsi => rsi !== null);
+        if (rsiValues.length < 4) return; // Se algum RSI não estiver disponível, pula essa moeda
+
+        const maxRSI = Math.max(...rsiValues);
+        const minRSI = Math.min(...rsiValues);
+        const aligned = (maxRSI - minRSI) <= 7;
+
+        let colorClass = "neutral";  // Padrão: cinza
+
+        if (aligned) {
+            if (rsiValues.every(rsi => rsi >= 70)) {
+                colorClass = "overbought";  // Vermelho → sobrecomprado
+            } else if (rsiValues.every(rsi => rsi <= 30)) {
+                colorClass = "oversold";  // Verde → sobrevenda
+            }
+        }
+
+        // Criar elemento no heatmap
+        const coinDiv = document.createElement("div");
+        coinDiv.className = `heatmap-box ${colorClass}`;
+        coinDiv.innerHTML = `<b>${coinSymbol}</b>`;
+        heatmapContainer.appendChild(coinDiv);
+    } catch (error) {
+        console.error(`Erro ao processar ${coinSymbol}:`, error);
+    }
+}
+
+// Atualizar heatmap com todas as moedas
+async function updateHeatmap() {
+    const heatmapContainer = document.getElementById("heatmap");
+    heatmapContainer.innerHTML = ""; // Limpa antes de atualizar
+
+    const topCoins = await getTopCoins();
+    for (const coin of topCoins) {
+        await fetchAndDisplayRSI(coin, heatmapContainer);
+    }
+}
+
+// Função para mostrar botão de atualização a cada 1 minuto
+function showUpdateButton() {
+    const button = document.getElementById("updateButton");
+    button.style.display = "block"; // Exibe o botão
+}
+
+// Função para atualizar ao clicar no botão
+function manualUpdate() {
+    updateHeatmap();
+    const button = document.getElementById("updateButton");
+    button.style.display = "none"; // Esconde o botão após clicar
+}
+
+// Inicializa o heatmap e atualiza automaticamente
+updateHeatmap();
+setInterval(updateHeatmap, 30000);  // Atualiza a cada 30 segundos
+setInterval(showUpdateButton, 60000);  // Mostra o botão a cada 1 minuto
