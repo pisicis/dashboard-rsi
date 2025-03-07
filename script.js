@@ -1,42 +1,40 @@
 const COINS_LIMIT = 200;
-const API_URL = "https://api.binance.com/sapi/v1/capital/config/getall";  // Endpoint para buscar moedas individuais
+const API_URL = "https://api.binance.com/api/v3/exchangeInfo";  // Nova API pública
 const KLINES_API = "https://api.binance.com/api/v3/klines";
 
 // Lista de stablecoins para ignorar
 const STABLECOINS = ["BUSD", "USDC", "DAI", "TUSD", "FDUSD"];
 
-// Buscar lista das top 200 moedas individuais
+// Função para buscar os pares da Binance
 async function getTopCoins() {
     try {
-        const response = await fetch(API_URL, {
-            method: "GET",
-            headers: { "X-MBX-APIKEY": "SUA_API_KEY_AQUI" } // Substituir pela sua API Key
-        });
+        const response = await fetch(API_URL);
         const data = await response.json();
 
-        return data
-            .filter(coin => !STABLECOINS.includes(coin.coin)) // Remover stablecoins
-            .map(coin => coin.coin)
+        return data.symbols
+            .map(coin => coin.symbol)
+            .filter(symbol => symbol.endsWith("USDT"))  // Apenas pares USDT
+            .filter(symbol => !STABLECOINS.some(stable => symbol.includes(stable))) // Remove stablecoins
+            .map(symbol => symbol.replace("USDT", "")) // Remove o sufixo USDT
             .slice(0, COINS_LIMIT); // Pegamos apenas as top 200 moedas
 
     } catch (error) {
-        console.error("Erro ao buscar moedas:", error);
+        console.error("❌ Erro ao buscar moedas na API da Binance:", error);
         return [];
     }
 }
 
 // Função para calcular RSI
 function calculateRSI(closingPrices) {
-    const n = closingPrices.length;
-    if (n < 2) return 0;
+    if (closingPrices.length < 2) return 0;
     let avgUp = 0, avgDown = 0;
-    for (let i = 1; i < n; i++) {
+    for (let i = 1; i < closingPrices.length; i++) {
         const change = closingPrices[i] - closingPrices[i - 1];
         if (change > 0) avgUp += change;
         else avgDown += Math.abs(change);
     }
-    avgUp /= (n - 1);
-    avgDown /= (n - 1);
+    avgUp /= closingPrices.length - 1;
+    avgDown /= closingPrices.length - 1;
     if (avgDown === 0) return 100;
     const rs = avgUp / avgDown;
     return 100 - (100 / (1 + rs));
@@ -45,17 +43,20 @@ function calculateRSI(closingPrices) {
 // Buscar RSI para diferentes tempos gráficos
 async function fetchRSI(coinSymbol, interval) {
     try {
-        const symbol = coinSymbol + "USDT";  // Formamos o par para consultar os dados de preço
+        const symbol = coinSymbol + "USDT"; // Formamos o par para consulta
         const url = `${KLINES_API}?symbol=${symbol}&interval=${interval}&limit=15`;
         const response = await fetch(url);
         const data = await response.json();
 
-        if (!data || data.length === 0) return null;
+        if (!data || data.length === 0) {
+            console.warn(`⚠️ Sem dados para ${symbol} (${interval})`);
+            return null;
+        }
 
         const closingPrices = data.map(candle => parseFloat(candle[4])); // Preço de fechamento
         return calculateRSI(closingPrices);
     } catch (error) {
-        console.error(`Erro ao buscar RSI de ${coinSymbol} (${interval}):`, error);
+        console.error(`❌ Erro ao buscar RSI de ${coinSymbol} (${interval}):`, error);
         return null;
     }
 }
@@ -93,7 +94,7 @@ async function fetchAndDisplayRSI(coinSymbol, heatmapContainer) {
         coinDiv.innerHTML = `<b>${coinSymbol}</b>`;
         heatmapContainer.appendChild(coinDiv);
     } catch (error) {
-        console.error(`Erro ao processar ${coinSymbol}:`, error);
+        console.error(`❌ Erro ao processar ${coinSymbol}:`, error);
     }
 }
 
@@ -103,6 +104,11 @@ async function updateHeatmap() {
     heatmapContainer.innerHTML = ""; // Limpa antes de atualizar
 
     const topCoins = await getTopCoins();
+    if (topCoins.length === 0) {
+        console.error("❌ Nenhuma moeda encontrada! Verifique a API da Binance.");
+        return;
+    }
+
     for (const coin of topCoins) {
         await fetchAndDisplayRSI(coin, heatmapContainer);
     }
@@ -123,5 +129,5 @@ function manualUpdate() {
 
 // Inicializa o heatmap e atualiza automaticamente
 updateHeatmap();
-setInterval(updateHeatmap, 30000);  // Atualiza a cada 30 segundos
+setInterval(updateHeatmap, 60000);  // Atualiza a cada 1 minuto
 setInterval(showUpdateButton, 60000);  // Mostra o botão a cada 1 minuto
