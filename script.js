@@ -1,23 +1,24 @@
 const COINS_LIMIT = 200;
-const API_URL = "https://api.binance.com/api/v3/exchangeInfo";  // Nova API pública
+const API_URL = "https://api.binance.com/api/v3/exchangeInfo";  // API pública da Binance
 const KLINES_API = "https://api.binance.com/api/v3/klines";
 
 // Lista de stablecoins para ignorar
 const STABLECOINS = ["BUSD", "USDC", "DAI", "TUSD", "FDUSD"];
 
-// Função para buscar os pares da Binance
+// Buscar lista das top 200 moedas (filtrando apenas as que são USDT)
 async function getTopCoins() {
     try {
         const response = await fetch(API_URL);
         const data = await response.json();
 
-        return data.symbols
-            .map(coin => coin.symbol)
-            .filter(symbol => symbol.endsWith("USDT"))  // Apenas pares USDT
-            .filter(symbol => !STABLECOINS.some(stable => symbol.includes(stable))) // Remove stablecoins
-            .map(symbol => symbol.replace("USDT", "")) // Remove o sufixo USDT
+        const topCoins = data.symbols
+            .filter(symbolData => symbolData.symbol.endsWith("USDT"))  // Apenas pares USDT
+            .filter(symbolData => !STABLECOINS.some(stable => symbolData.symbol.includes(stable))) // Remove stablecoins
+            .map(symbolData => symbolData.symbol.replace("USDT", "")) // Remove o sufixo USDT
             .slice(0, COINS_LIMIT); // Pegamos apenas as top 200 moedas
 
+        console.log("✅ Moedas carregadas:", topCoins);
+        return topCoins;
     } catch (error) {
         console.error("❌ Erro ao buscar moedas na API da Binance:", error);
         return [];
