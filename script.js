@@ -2,6 +2,16 @@
 const API_BASE = "https://api.coingecko.com/api/v3";
 const UPDATE_INTERVAL = 60000; // Atualiza a cada 1 minuto
 
+document.addEventListener("DOMContentLoaded", () => {
+    const container = document.getElementById("crypto-container");
+    if (!container) {
+        console.error("Elemento #crypto-container não encontrado no DOM.");
+        return;
+    }
+    setInterval(updateDashboard, UPDATE_INTERVAL);
+    updateDashboard();
+});
+
 // Função para buscar as 10 moedas principais
 async function getTopCoins() {
     try {
@@ -33,17 +43,11 @@ async function updateDashboard() {
         return;
     }
 
-    for (let symbol of topCoins) { // Pegando apenas as top 10
+    topCoins.forEach(symbol => {
         let div = document.createElement("div");
         div.textContent = symbol;
         div.style.backgroundColor = "gray";
         div.className = "crypto-box";
         container.appendChild(div);
-    }
+    });
 }
-
-// Garantir que o script rode após o carregamento do DOM
-document.addEventListener("DOMContentLoaded", () => {
-    setInterval(updateDashboard, UPDATE_INTERVAL);
-    updateDashboard();
-});
