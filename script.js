@@ -17,7 +17,10 @@ async function getTopCoins() {
     try {
         const response = await fetch(`${API_BASE}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=10&page=1&sparkline=false`);
         if (!response.ok) throw new Error("Erro ao buscar moedas disponíveis");
-        const data = await response.json();
+        
+        const json = await response.json();
+        const data = JSON.parse(json.contents); // Ajuste necessário para processar o JSON vindo do proxy
+
         return data.map(coin => coin.symbol.toUpperCase());
     } catch (error) {
         console.error("Erro ao obter moedas disponíveis:", error);
