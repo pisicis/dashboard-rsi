@@ -1,5 +1,5 @@
 // Configurações iniciais
-const API_BASE = "https://api.coingecko.com/api/v3";
+const API_BASE = "https://api.allorigins.win/get?url=" + encodeURIComponent("https://api.coingecko.com/api/v3");
 const UPDATE_INTERVAL = 60000; // Atualiza a cada 1 minuto
 
 document.addEventListener("DOMContentLoaded", () => {
